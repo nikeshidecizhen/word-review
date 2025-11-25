@@ -66,17 +66,6 @@ const WORDS = [
     "category": "electronics"
   },
   {
-    "word": "wireless earbuds",
-    "ipa": "/ˈwaɪər.ləs ˈɪəbʌdz/",
-    "pos": "phrase n.",
-    "translation": "无线耳机",
-    "pinyin": "wú xiàn ěr jī",
-    "example1": "Wireless earbuds are widely used for listening to music and making calls on mobile devices.",
-    "example1Translation": "无线耳机被广泛用于在移动设备上听音乐和打电话。",
-    "extension": "采用蓝牙技术实现无线连接的便携式音频设备，通常配备充电盒，支持降噪、触控操作等功能，是消费电子领域的常见产品",
-    "category": "electronics"
-  },
-  {
     "word": "electric kettle",
     "ipa": "/ɪˈlek.trɪk ˈket.l/",
     "pos": "phrase n.",
@@ -96,17 +85,6 @@ const WORDS = [
     "example1": "I like drinking tea with this delicate ceramic cup because it keeps the temperature well.",
     "example1Translation": "我喜欢用这个精致的陶瓷杯喝茶，因为它的保温效果很好。",
     "extension": "以陶瓷为材质，通常具备保温、易清洁的特点，部分带有装饰性花纹/金边设计，常用于饮水、泡茶",
-    "category": "daily"
-  },
-  {
-    "word": "wine glass",
-    "ipa": "/ˈwaɪn ɡlɑːs/",
-    "pos": "phrase n.",
-    "translation": "高脚杯",
-    "pinyin": "gāo jiǎo bēi",
-    "example1": "A wine glass is typically used to serve wine, with its long stem designed to avoid warming the drink with hand heat.",
-    "example1Translation": "高脚杯通常用于盛放葡萄酒，其长杯柄的设计可避免手部热量加热饮品。",
-    "extension": "以玻璃为主要材质的饮具，通常带有细长杯柄与较大杯身，常见于餐饮场景，也可用于盛放其他饮品，兼具实用性与装饰性",
     "category": "daily"
   }
 ];
