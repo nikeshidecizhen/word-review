@@ -253,6 +253,9 @@
         const example1HTML = splitSentenceToSpans(item.example1, 'en-US');
         const example1TransHTML = splitSentenceToSpans(item.example1Translation, 'zh-CN');
 
+        // ✅ 新增：词性，没写就默认 n.
+        const pos = item.pos || "n.";
+
         const card = document.createElement('div');
         card.className = 'rounded-xl overflow-hidden shadow-md bg-white hover:shadow-lg transition-shadow';
 
@@ -289,6 +292,7 @@
             </div>
 
             <div class="mt-2">
+              <span class="text-xs italic text-gray-500">${pos}</span>
               <span class="text-gray-700">${item.translation}</span>
             </div>
 
