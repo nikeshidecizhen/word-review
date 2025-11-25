@@ -34,6 +34,38 @@
     return proficiency;
   }
 
+  /**
+   * 把熟练度 0~10 渲染成 5 颗星（0.5 星一个刻度）
+   * 例：3 → 1 满星 + 1 半星 + 3 空星
+   */
+  function renderProficiencyStars(proficiency) {
+    const totalStars = 5;
+    const starValue = proficiency / 2; // 0~5，步长0.5
+    const fullStars = Math.floor(starValue);
+    const hasHalf = (starValue - fullStars) >= 0.5;
+    const emptyStars = totalStars - fullStars - (hasHalf ? 1 : 0);
+
+    let html = '<div class="flex items-center gap-1">';
+
+    // 满星
+    for (let i = 0; i < fullStars; i++) {
+      html += '<i class="fas fa-star text-yellow-400"></i>';
+    }
+    // 半星
+    if (hasHalf) {
+      html += '<i class="fas fa-star-half-alt text-yellow-400"></i>';
+    }
+    // 空星
+    for (let i = 0; i < emptyStars; i++) {
+      html += '<i class="far fa-star text-yellow-300"></i>';
+    }
+
+    // 数字标注
+    html += `<span class="ml-1 text-xs text-gray-500">${proficiency}/10</span>`;
+    html += '</div>';
+    return html;
+  }
+
   function shuffle(array) {
     const arr = [...array];
     for (let i = arr.length - 1; i > 0; i--) {
@@ -129,12 +161,15 @@
           </div>
           <div id="ipa-section" class="text-sm text-gray-500 min-h-[1.5rem] mb-2"></div>
           <div id="meaning-section" class="min-h-[3rem] mb-4 text-left"></div>
-          <div class="mt-2 inline-block bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm">
-            熟练度：${proficiency}/10
+          <div class="mt-2 inline-flex items-center justify-center bg-yellow-50 px-3 py-1 rounded-full text-sm">
+            ${renderProficiencyStars(proficiency)}
           </div>
         </div>
 
-        <div class="flex flex-col sm:flex-row gap-3 justify-center mt-6">
+        <div class="flex flex-col sm:flex-row flex-wrap gap-3 justify-center mt-6">
+          <button id="btn-prev" class="px-5 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-medium">
+            ⬅ Previous
+          </button>
           <button id="btn-show-meaning" class="px-5 py-2.5 bg-yellow-100 hover:bg-yellow-200 text-gray-800 rounded-lg font-medium">
             🔍 Display？
           </button>
@@ -150,6 +185,19 @@
           进度：${currentIndex + 1} / ${wordsToReview.length}
         </div>
       `;
+
+      // Previous 按钮：回到上一条
+      const btnPrev = document.getElementById('btn-prev');
+      if (currentIndex === 0) {
+        btnPrev.classList.add('opacity-50', 'cursor-not-allowed');
+      } else {
+        btnPrev.classList.remove('opacity-50', 'cursor-not-allowed');
+      }
+      btnPrev.onclick = () => {
+        if (currentIndex === 0) return;
+        currentIndex--;
+        showWord(wordsToReview[currentIndex]);
+      };
 
       // Display：第一次显示，再次点击隐藏（遮盖）
       const btnShowMeaning = document.getElementById('btn-show-meaning');
