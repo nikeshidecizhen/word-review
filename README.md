@@ -5,12 +5,13 @@
 5. 欢迎大家提出新的建议；
 
 **补充新词汇表使用方法：**
-/**补充新的单词js文件**
+**1.补充新的单词js文件**
 建立文件名为iseda.js，内容如下：
 const ISEDA_WORDS = [
     {
       "word": "evaluation metric",
       "ipa": "/ɪˌvæljuˈeɪʃn ˈmetrɪk/",
+      "pos": "phrase n.",
       "translation": "评估指标",
       "pinyin": "píng gū zhǐ biāo",
       "example1": "Mean relative error and PDP are key evaluation metrics for circuits.",
@@ -28,10 +29,9 @@ const ISEDA_WORDS = [
       window.WORDS = ISEDA_WORDS.slice(); //ISEDA_WORDS加入到WORDS中
     }
   })();
-
 **补充新的单词js文件模版结尾**
 
-在index.html中引入js文件：
+**2.在index.html中引入js文件：**
 **
 <script src="iseda.js"></script>
 **
