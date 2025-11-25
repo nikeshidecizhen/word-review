@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>📚 智能单词卡片 · 收藏+分类+发音</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+  <style>
+    .card img { transition: transform 0.2s; cursor: pointer; }
+    .card:hover img { transform: scale(1.03); }
+    .speak-btn { transition: all 0.15s; }
+    .speak-btn:active { transform: scale(0.92); }
+    .favorite-btn.favorited { color: #ef4444; }
+    .word-token {
+      display: inline-block;
+      padding: 0 2px;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    .word-token:hover {
+      background-color: #dbeafe;
+    }
+  </style>
+</head>
+<body class="bg-gray-50 p-4">
+
+  <div class="max-w-6xl mx-auto">
+    <h1 class="text-2xl font-bold text-center mb-4 text-gray-800">📚 智能单词卡片</h1>
+
+    <!-- 控制面板 -->
+    <div class="mb-6 flex flex-col sm:flex-row gap-3">
+      <input 
+        type="text" 
+        id="searchInput" 
+        placeholder="🔍 模糊搜索（英文/中文/分类）..." 
+        class="flex-1 p-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:outline-none shadow-sm"
+      />
+      
+      <div class="flex gap-2">
+        <button id="viewAll" class="px-4 py-2 bg-gray-200 rounded-lg hover:bg-gray-300">全部</button>
+        <button id="viewFavorites" class="px-4 py-2 bg-pink-100 rounded-lg hover:bg-pink-200">收藏</button>
+        <button id="startReview" class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600">开始复习</button>
+      </div>
+    </div>
+
+    <div id="categoryFilters" class="mb-4 flex flex-wrap gap-2"></div>
+
+    <div id="cards-container" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+  </div>
+
+  <script src="words.js"></script>
+  <script src="reviewModule.js"></script> <!-- 新增 -->
+
+  <script>
+    // ========== 核心功能函数（保持不变） ==========
+    function speakText(text, lang = 'en-US') {
+      if (!('speechSynthesis' in window)) {
+        alert('浏览器不支持语音朗读，请使用 Chrome 或 Edge');
+        return;
+      }
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = lang;
+      utterance.rate = 1.0;
+      speechSynthesis.speak(utterance);
+    }
+
+    function searchImage(keyword) {
+      const url = `https://image.baidu.com/search/index?tn=baiduimage&word=${encodeURIComponent(keyword)}`;
+      window.open(url, '_blank');
+    }
+
+    // ========== 【重点修改】：替换 fuzzyMatch 和 filterWords ==========
+    
+    // 子序列判断（用于跳字符匹配）
+    function isSubsequence(str, pattern) {
+      if (!pattern) return true;
+      let i = 0, j = 0;
+      while (i < str.length && j < pattern.length) {
+        if (str[i] === pattern[j]) j++;
+        i++;
+      }
+      return j === pattern.length;
+    }
+
+    // 强模糊匹配函数（替代原来的 fuzzyMatch）
+    function strongFuzzyMatch(item, query) {
+      if (!query) return true;
+      const q = query.trim().toLowerCase();
+      const cleanQ = q.replace(/\s+/g, '');
+
+      // 1. 原字段直接包含（英文小写 / 中文原词）
+      if (
+        item.word.toLowerCase().includes(q) ||
+        item.translation.includes(query) ||
+        (item.extension && item.extension.toLowerCase().includes(q)) ||
+        (item.category && item.category.toLowerCase().includes(q))
+      ) {
+        return true;
+      }
+
+      // 2. 英文跳字符匹配
+      if (isSubsequence(item.word.toLowerCase(), cleanQ)) {
+        return true;
+      }
+
+      // 3. 中文关键词匹配（translation + extension）
+      const chineseCombined = item.translation + ' ' + (item.extension || '');
+      if (chineseCombined.includes(query)) {
+        return true;
+      }
+
+      // 4. 拼音匹配（依赖 words.js 中的 pinyin 字段）
+      if (item.pinyin) {
+        const pyNoSpace = item.pinyin.toLowerCase().replace(/\s+/g, ''); // "wuxianshubiao"
+        const firstLetters = item.pinyin.split(/\s+/).map(p => p.charAt(0)).join(''); // "wxsb"
+
+        if (
+          pyNoSpace.includes(cleanQ) ||           // 全拼包含
+          firstLetters.includes(cleanQ) ||        // 首字母包含
+          isSubsequence(pyNoSpace, cleanQ)        // 拼音跳字符
+        ) {
+          return true;
+        }
+      }
+
+      return false;
+    }
+
+    // 替换原来的 filterWords
+    function filterWords(words, query) {
+      return words.filter(item => strongFuzzyMatch(item, query));
+    }
+
+    // ========== 收藏管理（保持不变） ==========
+    const FAVORITES_KEY = 'word_favorites_v2';
+
+    function getFavorites() {
+      const data = localStorage.getItem(FAVORITES_KEY);
+      return data ? JSON.parse(data) : [];
+    }
+
+    function saveFavorites(favs) {
+      localStorage.setItem(FAVORITES_KEY, JSON.stringify(favs));
+    }
+
+    function isFavorited(word) {
+      return getFavorites().some(f => f.word === word);
+    }
+
+    function toggleFavorite(word) {
+      const favs = getFavorites();
+      const exists = favs.findIndex(f => f.word === word);
+      if (exists >= 0) {
+        favs.splice(exists, 1);
+      } else {
+        favs.push({ word, timestamp: Date.now() });
+      }
+      saveFavorites(favs);
+      renderCards();
+    }
+
+    // ========== 例句分词函数（保持不变） ==========
+    function splitSentenceToSpans(sentence, lang = 'en-US') {
+      if (!sentence) return '';
+      return sentence.split(/(\s+)/)
+        .map(token => {
+          if (/^\s*$/.test(token)) return token;
+          const cleanWord = token.replace(/[.,!?;:()\[\]"'—–…]/g, '');
+          if (!cleanWord) return token;
+          return `<span class="word-token"
+                        onclick="event.stopPropagation(); speakText('${cleanWord.replace(/'/g, "\\'")}', '${lang}')">${token}</span>`;
+        })
+        .join('');
+    }
+
+    // ========== 渲染逻辑（保持不变） ==========
+    let currentView = 'all';
+    let currentSearchQuery = '';
+
+    function getAllCategories() {
+      const cats = new Set();
+      WORDS.forEach(w => {
+        if (w.category) cats.add(w.category);
+      });
+      return Array.from(cats).sort();
+    }
+
+    function renderCategoryFilters() {
+      const container = document.getElementById('categoryFilters');
+      const categories = getAllCategories();
+      if (categories.length === 0) {
+        container.innerHTML = '';
+        return;
+      }
+
+      let html = '<span class="text-sm font-medium text-gray-600 mr-2">分类：</span>';
+      html += `<button class="px-3 py-1 text-sm rounded ${currentView === 'all' ? 'bg-blue-500 text-white' : 'bg-gray-200'}" onclick="setView('all')">全部</button>`;
+      
+      categories.forEach(cat => {
+        const isActive = currentView === `category:${cat}`;
+        html += `
+          <button class="px-3 py-1 text-sm rounded ${isActive ? 'bg-blue-500 text-white' : 'bg-gray-200'}"
+                  onclick="setView('category:${cat}')">
+            ${cat}
+          </button>
+        `;
+      });
+      container.innerHTML = html;
+    }
+
+    function setView(view) {
+      currentView = view;
+      renderCategoryFilters();
+      renderCards();
+    }
+
+    function renderCards() {
+      const container = document.getElementById('cards-container');
+      let wordsToShow = [];
+
+      if (currentView === 'favorites') {
+        const favs = getFavorites();
+        const favWordSet = new Set(favs.map(f => f.word));
+        wordsToShow = WORDS.filter(w => favWordSet.has(w.word));
+        wordsToShow.sort((a, b) => {
+          const timeA = favs.find(f => f.word === a.word)?.timestamp || 0;
+          const timeB = favs.find(f => f.word === b.word)?.timestamp || 0;
+          return timeB - timeA;
+        });
+      } else if (currentView.startsWith('category:')) {
+        const cat = currentView.split(':')[1];
+        wordsToShow = WORDS.filter(w => w.category === cat);
+      } else {
+        wordsToShow = [...WORDS];
+      }
+
+      const filtered = filterWords(wordsToShow, currentSearchQuery);
+      container.innerHTML = '';
+
+      if (filtered.length === 0) {
+        container.innerHTML = '<p class="col-span-full text-center text-gray-500 py-10">未找到匹配内容</p>';
+        return;
+      }
+
+      filtered.forEach(item => {
+        const keyword = item.word || item.translation;
+        const favorited = isFavorited(item.word);
+
+        const example1HTML = splitSentenceToSpans(item.example1, 'en-US');
+        const example2TransHTML = splitSentenceToSpans(item.example2Translation, 'zh-CN');
+
+        const card = document.createElement('div');
+        card.className = 'rounded-xl overflow-hidden shadow-md bg-white hover:shadow-lg transition-shadow';
+
+        card.innerHTML = `
+          <div class="relative">
+            <div class="h-40 bg-gray-100 flex items-center justify-center" 
+                 onclick="searchImage('${keyword.replace(/'/g, "\\'")}'); event.stopPropagation();">
+              <div class="text-center px-4">
+                <i class="fas fa-search text-gray-400 text-3xl mb-2"></i>
+                <p class="text-sm text-gray-600">点击搜图：<br><span class="font-medium">${keyword}</span></p>
+              </div>
+            </div>
+            <button class="absolute top-2 right-2 favorite-btn ${favorited ? 'favorited' : ''}" 
+                    onclick="event.stopPropagation(); toggleFavorite('${item.word.replace(/'/g, "\\'")}');">
+              <i class="fas fa-heart text-lg"></i>
+            </button>
+            ${item.category ? `<div class="absolute bottom-2 left-2 bg-blue-500 text-white text-xs px-2 py-1 rounded">${item.category}</div>` : ''}
+          </div>
+          <div class="p-4">
+            <div class="flex items-baseline gap-2">
+              <span class="text-lg font-semibold text-gray-800">${item.word}</span>
+              <span class="text-xs text-gray-500 cursor-pointer hover:text-blue-600" 
+                    onclick="event.stopPropagation(); speakText('${item.word.replace(/'/g, "\\'")}', 'en-US')">
+                ${item.ipa || ''}
+              </span>
+            </div>
+
+            <div class="mt-2">
+              <span class="text-gray-700">${item.translation}</span>
+            </div>
+
+            <div class="mt-3">
+              <div class="flex items-start gap-2">
+                <button class="speak-btn bg-green-500 hover:bg-green-600 text-white rounded-full w-7 h-7 flex items-center justify-center mt-0.5"
+                        onclick="event.stopPropagation(); speakText('${item.example1.replace(/'/g, "\\'")}', 'en-US')">
+                  <i class="fas fa-play text-[10px]"></i>
+                </button>
+                <p class="text-sm text-gray-700">${example1HTML}</p>
+              </div>
+            </div>
+
+            <p class="text-sm text-gray-700 mt-2">${example2TransHTML}</p>
+
+            <div class="mt-3 pt-2 border-t border-gray-100">
+              <p class="text-sm text-gray-600">${item.extension}</p>
+            </div>
+          </div>
+        `;
+
+        container.appendChild(card);
+      });
+    }
+
+    // ========== 初始化（保持不变） ==========
+    document.addEventListener('DOMContentLoaded', () => {
+      document.getElementById('viewAll').addEventListener('click', () => setView('all'));
+      
+      document.getElementById('viewFavorites').addEventListener('click', () => setView('favorites'));
+
+      document.getElementById('startReview').addEventListener('click', () => {
+         WordReview.start(WORDS);
+         });
+
+      document.getElementById('searchInput').addEventListener('input', (e) => {
+        currentSearchQuery = e.target.value;
+        renderCards();
+      });
+
+      renderCategoryFilters();
+      renderCards();
+    });
+  </script>
+</body>
+</html>
