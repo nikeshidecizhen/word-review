@@ -97,5 +97,16 @@ const WORDS = [
     "example1Translation": "我喜欢用这个精致的陶瓷杯喝茶，因为它的保温效果很好。",
     "extension": "以陶瓷为材质，通常具备保温、易清洁的特点，部分带有装饰性花纹/金边设计，常用于饮水、泡茶",
     "category": "daily"
+  },
+  {
+    "word": "wine glass",
+    "ipa": "/ˈwaɪn ɡlɑːs/",
+    "pos": "phrase n.",
+    "translation": "高脚杯",
+    "pinyin": "gāo jiǎo bēi",
+    "example1": "A wine glass is typically used to serve wine, with its long stem designed to avoid warming the drink with hand heat.",
+    "example1Translation": "高脚杯通常用于盛放葡萄酒，其长杯柄的设计可避免手部热量加热饮品。",
+    "extension": "以玻璃为主要材质的饮具，通常带有细长杯柄与较大杯身，常见于餐饮场景，也可用于盛放其他饮品，兼具实用性与装饰性",
+    "category": "daily"
   }
 ];
